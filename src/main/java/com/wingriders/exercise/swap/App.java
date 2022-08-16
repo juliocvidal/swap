@@ -23,7 +23,8 @@ public class App {
         Scanner scanner;
         try {
             scanner = getScanner();
-            try (PrintWriter writer = new PrintWriter("answers.out", "UTF-8")) {
+            try (PrintWriter writer = new PrintWriter("answers.csv", "UTF-8")) {
+                writer.println("exchange y");
                 String header = scanner.nextLine();
 
                 while (scanner.hasNext()) {
@@ -40,7 +41,7 @@ public class App {
                     BigDecimal valueToBeExchanged = poolX.multiply(exchangeX).multiply(deductionFee).multiply(D);
 
                     BigDecimal exchangeY = valueToBeExchanged.divide(poolY, 2, RoundingMode.HALF_UP);
-                    writer.println(exchangeY);
+                    writer.println(exchangeY + ",");
                 }
             }
 
