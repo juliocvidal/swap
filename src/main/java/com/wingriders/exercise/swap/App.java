@@ -6,19 +6,21 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.Scanner;
 
 public class App {
 
     public static void main(String[] args) {
-        int A;
+        int A; // Amplification coefficient
+        BigDecimal D; // total deposit size
+        int n = 2; // number of currencies
+
         BigDecimal poolX;
         BigDecimal poolY;
         BigDecimal exchangeX;
 
-        MathContext mathContext = new MathContext(2);
-
-        Scanner scanner = null;
+        Scanner scanner;
         try {
             scanner = getScanner();
             try (PrintWriter writer = new PrintWriter("answers.out", "UTF-8")) {
@@ -31,14 +33,14 @@ public class App {
                     poolX = new BigDecimal(values[1]);
                     poolY = new BigDecimal(values[2]);
                     exchangeX = new BigDecimal(values[3]);
-                    writer.println("A: " + A + "; Pool X: " + poolX + "; Pool Y: " + poolY + "; Exchange X: " + exchangeX);
 
-                    // BigDecimal deductionFee = new BigDecimal("0.9965");
-                    BigDecimal valueToBeExchanged = poolX.multiply(exchangeX, mathContext);//.multiply(deductionFee, mathContext);
-                    writer.println("valueToBeExchanged: " + valueToBeExchanged);
+                    D = calculatesDValue(A, n, poolX, poolY);
 
-                    BigDecimal exchangeY = valueToBeExchanged.divide(poolY, mathContext);
-                    writer.println("exchangeY: " + exchangeY);
+                    BigDecimal deductionFee = new BigDecimal("0.9965");
+                    BigDecimal valueToBeExchanged = poolX.multiply(exchangeX).multiply(deductionFee).multiply(D);
+
+                    BigDecimal exchangeY = valueToBeExchanged.divide(poolY, 2, RoundingMode.HALF_UP);
+                    writer.println(exchangeY);
                 }
             }
 
@@ -46,6 +48,23 @@ public class App {
             e.printStackTrace();
         }
 
+
+    }
+
+    private static BigDecimal calculatesDValue(int A, int n, BigDecimal poolX, BigDecimal poolY) {
+
+//        https://github.com/curvefi/curve-contract/blob/master/tests/simulation.py
+//       D invariant calculation in non-overflowing integer operations
+//       iteratively
+//       A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
+//       Converging solution:
+//       D[j+1] = (A * n**n * sum(x_i) - D[j]**(n+1) / (n**n prod(x_i))) / (A * n**n - 1)
+//
+        int ann = A * n;
+        BigDecimal numberOfCoinsRaisedToOwnPower = BigDecimal.valueOf(Math.pow(n, n));
+        return poolX.multiply(BigDecimal.valueOf(A)).multiply(numberOfCoinsRaisedToOwnPower)  // (A * n**n * sum(x_i) - D[j]**(n+1)
+                .divide(poolX.multiply(numberOfCoinsRaisedToOwnPower) , 2, RoundingMode.HALF_UP) // (n**n prod(x_i)))
+                .divide (numberOfCoinsRaisedToOwnPower.multiply(BigDecimal.valueOf(A)).subtract(BigDecimal.ONE), 2, RoundingMode.HALF_UP); // (A * n**n - 1)
 
     }
 
